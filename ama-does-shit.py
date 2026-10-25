@@ -1,5 +1,6 @@
 import os
 import re
+from pathlib import Path
 
 import discord
 from discord.ext import commands
@@ -7,7 +8,11 @@ from discord.ext import commands
 intents = discord.Intents.default()
 intents.message_content = True
 
-bot = commands.Bot(command_prefix="!", intents=intents)
+class AmaBot(commands.Bot):
+    async def setup_hook(self) -> None:
+        await self.tree.sync()
+
+bot = AmaBot(command_prefix="ama ", intents=intents)
 
 responses: dict[str, str] = {
     "punk": """yet you're "punk".... 
@@ -16,14 +21,19 @@ Fucking poser. Bet your second favorite band is sex pistols (industry plant, jus
 
 Punk and other underground scenes aren't dead, y'all poseurs just capitalized and bastardized them. Guess what, punk originates in LIBERTARIAN COMMUNIST circles (mainly among some anarchits). Not whatever green day or blink182 are.""",
     "who is ama": """they/she / FIND ME ON LISTENBRAINZ CUZ LAST.FM SUCKS (amathecutefurry) / Fuck streaming, fuck ai "music". / Keep ai slop out of last.fm. / If you're going to bootlick spotify or AI then DNI. (seriously, i will just block you) / Proud music player user (streaming SUUUUCKS) and music buyer (support your artists, not some goddamn corporations). / Knows how to use the lastfm api :3 / and obviously, im a furry and im cute / discord: justcallmeama / domain: dulapuldinbeci.gay""",
-    "philosophy": """today i made the philosophy class about Emma Goldman and next thing i know the teacher says it's amongst his favorite philosophical writers and that he wants me to make a project about her since I've read some of her bibliography. How can i make this about criticism of the state and anarchism?""",
+    "philosophy": """today i made the philosophy class about Emma Goldman and next thing i know the teacher says it's amongst his favorite philosophical writers and that he wants me to make a project about her since I've read some of her bibliography.
+    
+How can i make this about criticism of the state and anarchism?""",
     "bring me the horizon": """I hate Bring Me The Horizon, their first album is edgy as fuck and makes no sense (after all... it was written when Sykes was younger). However some of their next albums, Sempiternal, That's The Spirit and imo even a few songs from There is a Hell are good. HOWEVER, THEY SUPPORT AI AND PETA, BOTH SHITTY THINGS. (peta vegans are the most LARPing shit ever. peta is anything but animal friendly. and ofc they're the most vocal and try to push their ideology onto others despite their shelters in the US euthanasiating most animals out of any other shelters in the USA). So yea... I tbh find some of their songs good, others... not really. 
+
+Anyone else relates?""",
+    "bmth": """I hate Bring Me The Horizon, their first album is edgy as fuck and makes no sense (after all... it was written when Sykes was younger). However some of their next albums, Sempiternal, That's The Spirit and imo even a few songs from There is a Hell are good. HOWEVER, THEY SUPPORT AI AND PETA, BOTH SHITTY THINGS. (peta vegans are the most LARPing shit ever. peta is anything but animal friendly. and ofc they're the most vocal and try to push their ideology onto others despite their shelters in the US euthanasiating most animals out of any other shelters in the USA). So yea... I tbh find some of their songs good, others... not really. 
 
 Anyone else relates?""",
     "nirvana": "(jokes aside, nirvana kinda sucks... 2 druggies with opposing political ideologies (kurt and krist) and then there's Grohl, least controversial idc he cheated on somebody that's not my business, its his relationship not mine).",
     "kurt": "(jokes aside, nirvana kinda sucks... 2 druggies with opposing political ideologies (kurt and krist) and then there's Grohl, least controversial idc he cheated on somebody that's not my business, its his relationship not mine).",
     "kurt cobain": "(jokes aside, nirvana kinda sucks... 2 druggies with opposing political ideologies (kurt and krist) and then there's Grohl, least controversial idc he cheated on somebody that's not my business, its his relationship not mine).",
-    "israel": "come to Israel and help us bomb the colored palestinians 🥹",
+    "israel": "come to Israel and help us bomb the coloured palestinians 🥹",
     "tech": "learning tech history made me understand that its market is just corporatist shit and i dont belong there. So im gonna be studying psychology instead.",
     "psychology": "learning tech history made me understand that its market is just corporatist shit and i dont belong there. So im gonna be studying psychology instead.",
     "enema of the state": "also porn star on the cover? Didn't even know about her... They should have put a hot furry instead... WAIT... LETS START A BAND... CALL IT BLINK-621",
@@ -52,6 +62,42 @@ And it uses the shittiest DRM known to man.""",
     "uhh": "you're punk right? You must have at least a bit of knowledge about anarchism.",
     "dti": "that game enforces stereotypical and harmful female body image standards",
     "dress to impress": "that game enforces stereotypical and harmful female body image standards",
+    "maga": "tell him to shove fireworks up his ass and light them on fire",
+    "ai slop": """wow, how cool. I love AI slop.
+    
+Israel, generate me the next Punk anthem...
+
+Generating...""",
+    "mdni": "mdni never made any sense to me. Like what? Do you send online strangers porn?",
+    "manele": "antisocial pro-alcohol pro-drugs misogynistic lyrics, often with gramatical mistakes. And borderline cultural apropriation of traditional romani music.",
+    "tel aviv": "Israel is a racist state.I personally.propose a one state solution... A single state called Palestine with no official religion nor racial bullshit.",
+    "scrobble": "who needs scrobbling anyways", "scrobbling": "who needs scrobbling anyways", "scrobbles": "who needs scrobbling anyways", "scrobbled": "who needs scrobbling anyways",
+    "monster": "i don't even drink monster often lmao",
+    "drama": "Sigh... Im gonna have to face lots of drama this monday",
+    "larp": "everything i dont like is larp",
+    "charlie kirk": "imagine someone wearing ai generated slop to school and being the most idiotic and fascist person ever...",
+    "pink floyd": "or a teacher obsessed with pink floys who is also antisemitic (hates ALL JEWS), homophobic, racist and thinks the world need stricter teachers...",
+    "serious": "MY MAN CANT BE SERIOUS",
+    "weed": "i first bought weed at 15",
+    ".px": """.px
+    
+You've used up all your 30 pornography jumbles for today. Get OnlyFans to play unlimited jumble pornography and much more.
+-# Or unlock 60 daily pornography for everyone in this server with Pornography server.""",
+    "imagine dragons": "mid af band but their debut is overhated",
+    "high school": "also, why is it called highschool if neither you, not the teacher are allowed to get high?", "highschool": "also, why is it called highschool if neither you, not the teacher are allowed to get high?",
+    "gay": "im gayer than y'all"
+}
+
+trigger_groups: dict[str, tuple[str, ...]] = {
+    "nirvana": ("Nirvana", "Kurt", "Kurt Cobain"),
+    "dti": ("dti", "dress to impress"),
+    "scrobble": ("scrobble", "scrobbling", "scrobbles", "scrobbled"),
+    "high school": ("high school", "highschool"),
+    "bring me the horizon": ("bring me the horizon", "bmth"),
+}
+
+response_images: dict[str, Path] = {
+    "philosophy": Path(__file__).parent / "images" / "emmagoldman.jpg",
 }
 
 
@@ -65,10 +111,67 @@ async def on_message(message: discord.Message) -> None:
     for trigger, reply in responses.items():
         pattern = rf"\b{re.escape(trigger)}\b"
         if re.search(pattern, content, re.IGNORECASE):
-            await message.channel.send(reply)
+            image_path = response_images.get(trigger)
+            if image_path is None:
+                await message.channel.send(reply)
+            else:
+                await message.channel.send(
+                    content=reply,
+                    file=discord.File(image_path),
+                )
             break
 
     await bot.process_commands(message)
+
+
+@bot.hybrid_command(name="ping", description="Check whether the bot is online")
+async def ping(ctx: commands.Context) -> None:
+    await ctx.send("Pong!")
+
+
+def make_trigger_embed() -> discord.Embed:
+    lines: list[str] = []
+    displayed: set[str] = set()
+    for trigger in responses:
+        if trigger in displayed:
+            continue
+
+        group = trigger_groups.get(trigger)
+        if group is None:
+            lines.append(f"• **{trigger}**")
+            displayed.add(trigger)
+        else:
+            labels = ", ".join(f"**{label}**" for label in group)
+            lines.append(f"• {labels}")
+            displayed.update(label.lower() for label in group)
+
+    embed = discord.Embed(
+        title="Word triggers",
+        description="\n".join(lines),
+        color=discord.Color.blurple(),
+    )
+    embed.set_footer(text=f"{len(responses)} triggers • Include a trigger in a message")
+
+    return embed
+
+
+async def send_trigger_list(ctx: commands.Context) -> None:
+    embed = make_trigger_embed()
+    if ctx.interaction is not None:
+        await ctx.send(embed=embed, ephemeral=True)
+    else:
+        await ctx.send(embed=embed)
+
+
+@bot.hybrid_command(name="triggers", description="List the bot's word triggers")
+async def list_triggers(ctx: commands.Context) -> None:
+    await send_trigger_list(ctx)
+
+
+@bot.hybrid_command(name="list", description="List the bot's word triggers")
+async def list_alias(ctx: commands.Context) -> None:
+    await send_trigger_list(ctx)
+    await ctx.send("Pong!", ephemeral=True)
 
 
 token = os.getenv("DISCORD_TOKEN")

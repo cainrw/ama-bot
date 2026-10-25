@@ -79,9 +79,7 @@ Generating...""",
     "pink floyd": "or a teacher obsessed with pink floys who is also antisemitic (hates ALL JEWS), homophobic, racist and thinks the world need stricter teachers...",
     "serious": "MY MAN CANT BE SERIOUS",
     "weed": "i first bought weed at 15",
-    ".px": """.px
-    
-You've used up all your 30 pornography jumbles for today. Get OnlyFans to play unlimited jumble pornography and much more.
+    "px": """You've used up all your 30 pornography jumbles for today. Get OnlyFans to play unlimited jumble pornography and much more.
 -# Or unlock 60 daily pornography for everyone in this server with Pornography server.""",
     "imagine dragons": "mid af band but their debut is overhated",
     "high school": "also, why is it called highschool if neither you, not the teacher are allowed to get high?", "highschool": "also, why is it called highschool if neither you, not the teacher are allowed to get high?",
@@ -89,7 +87,7 @@ You've used up all your 30 pornography jumbles for today. Get OnlyFans to play u
 }
 
 trigger_groups: dict[str, tuple[str, ...]] = {
-    "nirvana": ("Nirvana", "Kurt", "Kurt Cobain"),
+    "nirvana": ("nirvana", "kurt", "kurt cobain"),
     "dti": ("dti", "dress to impress"),
     "scrobble": ("scrobble", "scrobbling", "scrobbles", "scrobbled"),
     "high school": ("high school", "highschool"),
@@ -129,7 +127,7 @@ async def ping(ctx: commands.Context) -> None:
     await ctx.send("Pong!")
 
 
-def make_trigger_embed() -> discord.Embed:
+def make_trigger_pages() -> list[discord.Embed]:
     lines: list[str] = []
     displayed: set[str] = set()
     for trigger in responses:
@@ -145,22 +143,67 @@ def make_trigger_embed() -> discord.Embed:
             lines.append(f"• {labels}")
             displayed.update(label.lower() for label in group)
 
-    embed = discord.Embed(
-        title="Word triggers",
-        description="\n".join(lines),
-        color=discord.Color.blurple(),
-    )
-    embed.set_footer(text=f"{len(responses)} triggers • Include a trigger in a message")
+    split_at = (len(lines) + 1) // 2
+    page_lines = (lines[:split_at], lines[split_at:])
 
-    return embed
+    pages: list[discord.Embed] = []
+    for index, page in enumerate(page_lines, start=1):
+        embed = discord.Embed(
+            title="Word triggers",
+            description="\n".join(page),
+            color=discord.Color.blurple(),
+        )
+        embed.set_footer(
+            text=f"Page {index}/2 • {len(responses)} triggers • Include a trigger in a message"
+        )
+        pages.append(embed)
+    return pages
+
+
+class TriggerListView(discord.ui.View):
+    def __init__(self) -> None:
+        super().__init__(timeout=180)
+        self.pages = make_trigger_pages()
+        self.page_index = 0
+        self.previous_button = discord.ui.Button(
+            label="Previous",
+            style=discord.ButtonStyle.secondary,
+            disabled=True,
+        )
+        self.next_button = discord.ui.Button(
+            label="Next",
+            style=discord.ButtonStyle.secondary,
+        )
+        self.previous_button.callback = self.go_previous
+        self.next_button.callback = self.go_next
+        self.add_item(self.previous_button)
+        self.add_item(self.next_button)
+
+    async def go_previous(self, interaction: discord.Interaction) -> None:
+        self.page_index = max(0, self.page_index - 1)
+        self.previous_button.disabled = self.page_index == 0
+        self.next_button.disabled = self.page_index == len(self.pages) - 1
+        await interaction.response.edit_message(
+            embed=self.pages[self.page_index],
+            view=self,
+        )
+
+    async def go_next(self, interaction: discord.Interaction) -> None:
+        self.page_index = min(len(self.pages) - 1, self.page_index + 1)
+        self.previous_button.disabled = self.page_index == 0
+        self.next_button.disabled = self.page_index == len(self.pages) - 1
+        await interaction.response.edit_message(
+            embed=self.pages[self.page_index],
+            view=self,
+        )
 
 
 async def send_trigger_list(ctx: commands.Context) -> None:
-    embed = make_trigger_embed()
+    view = TriggerListView()
     if ctx.interaction is not None:
-        await ctx.send(embed=embed, ephemeral=True)
+        await ctx.send(embed=view.pages[0], view=view, ephemeral=True)
     else:
-        await ctx.send(embed=embed)
+        await ctx.send(embed=view.pages[0], view=view)
 
 
 @bot.hybrid_command(name="triggers", description="List the bot's word triggers")
@@ -171,7 +214,6 @@ async def list_triggers(ctx: commands.Context) -> None:
 @bot.hybrid_command(name="list", description="List the bot's word triggers")
 async def list_alias(ctx: commands.Context) -> None:
     await send_trigger_list(ctx)
-    await ctx.send("Pong!", ephemeral=True)
 
 
 token = os.getenv("DISCORD_TOKEN")
